@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Set Game Solver</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      padding: 16px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 1.5rem;
+    }
+
+    /* Card input form */
+    .input-section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    .input-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: end;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .input-group label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #666;
+    }
+
+    .input-group select {
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      background: #fff;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-add {
+      background: #2EA043;
+      color: #fff;
+    }
+
+    .btn-add:hover { background: #278a38; }
+
+    .btn-check {
+      background: #7B61FF;
+      color: #fff;
+    }
+
+    .btn-check:hover { background: #6a4ee6; }
+
+    .btn-clear {
+      background: #E8453C;
+      color: #fff;
+    }
+
+    .btn-clear:hover { background: #d03a32; }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    /* Card grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-container {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .card-container .remove-btn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: none;
+      background: #E8453C;
+      color: #fff;
+      font-size: 12px;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      display: none;
+    }
+
+    .card-container:hover .remove-btn { display: block; }
+
+    .card-container.highlighted svg {
+      filter: drop-shadow(0 0 6px #FFD700);
+    }
+
+    .card-container.highlighted {
+      outline: 3px solid #FFD700;
+      border-radius: 10px;
+    }
+
+    .card-label {
+      text-align: center;
+      font-size: 0.65rem;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #999;
+      padding: 32px;
+      font-style: italic;
+    }
+
+    /* Set results */
+    .results-section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+      display: none;
+    }
+
+    .results-section.visible { display: block; }
+
+    .results-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .set-result {
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .set-result h3 {
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .set-cards {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .set-cards svg {
+      width: 100px;
+    }
+
+    .set-analysis {
+      font-size: 0.8rem;
+      color: #555;
+    }
+
+    .set-analysis .attr-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 2px 0;
+    }
+
+    .set-analysis .attr-status {
+      font-weight: 600;
+    }
+
+    .set-analysis .attr-status.same { color: #2EA043; }
+    .set-analysis .attr-status.different { color: #7B61FF; }
+
+    .no-sets {
+      text-align: center;
+      color: #999;
+      padding: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Set Game Solver</h1>
+
+  <div class="input-section">
+    <h2>Add a Card</h2>
+    <div class="input-row">
+      <div class="input-group">
+        <label for="sel-number">Number</label>
+        <select id="sel-number">
+          <option value="0">1</option>
+          <option value="1">2</option>
+          <option value="2">3</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="sel-color">Color</label>
+        <select id="sel-color">
+          <option value="0">Red</option>
+          <option value="1">Green</option>
+          <option value="2">Purple</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="sel-shape">Shape</label>
+        <select id="sel-shape">
+          <option value="0">Diamond</option>
+          <option value="1">Squiggle</option>
+          <option value="2">Oval</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label for="sel-shading">Shading</label>
+        <select id="sel-shading">
+          <option value="0">Solid</option>
+          <option value="1">Striped</option>
+          <option value="2">Empty</option>
+        </select>
+      </div>
+      <button class="btn btn-add" id="btn-add">Add Card</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-check" id="btn-check">Check for Sets</button>
+      <button class="btn btn-clear" id="btn-clear">Clear All</button>
+    </div>
+  </div>
+
+  <div id="card-grid" class="card-grid">
+    <div class="empty-state" id="empty-state">No cards added yet. Use the form above to add cards.</div>
+  </div>
+
+  <div id="results-section" class="results-section">
+    <h2 id="results-title">Sets Found</h2>
+    <div id="results-body"></div>
+  </div>
+
+  <script type="module">
+    import { createCard, isValidSet, findAllSets, ATTRIBUTES } from './set-engine.js';
+
+    const COLORS = ['#E8453C', '#2EA043', '#7B61FF'];
+    const COLOR_NAMES = ['Red', 'Green', 'Purple'];
+    const SHAPE_NAMES = ['Diamond', 'Squiggle', 'Oval'];
+    const SHADING_NAMES = ['Solid', 'Striped', 'Empty'];
+    const NUMBER_NAMES = ['1', '2', '3'];
+
+    let cards = [];
+
+    // --- SVG Card Rendering ---
+
+    function createStripedPattern(id, color) {
+      return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="6" height="6">
+        <rect width="6" height="6" fill="white"/>
+        <line x1="0" y1="3" x2="6" y2="3" stroke="${color}" stroke-width="2"/>
+      </pattern>`;
+    }
+
+    function getShapeFill(shading, color, patternId) {
+      if (shading === 0) return color;           // Solid
+      if (shading === 1) return `url(#${patternId})`; // Striped
+      return 'white';                             // Empty
+    }
+
+    function getShapeStroke(color) {
+      return color;
+    }
+
+    function renderDiamond(cx, cy, w, h, fill, stroke) {
+      const hw = w / 2, hh = h / 2;
+      return `<polygon points="${cx},${cy - hh} ${cx + hw},${cy} ${cx},${cy + hh} ${cx - hw},${cy}"
+        fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    }
+
+    function renderOval(cx, cy, w, h, fill, stroke) {
+      const rx = w / 2, ry = h / 2;
+      return `<rect x="${cx - rx}" y="${cy - ry}" width="${w}" height="${h}" rx="${ry}" ry="${ry}"
+        fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    }
+
+    function renderSquiggle(cx, cy, w, h, fill, stroke) {
+      const hw = w / 2, hh = h / 2;
+      const x = cx - hw, y = cy - hh;
+      return `<path d="M${x + w * 0.1},${y + hh}
+        C${x + w * 0.1},${y + hh * 0.3} ${x + w * 0.35},${y} ${x + hw},${y}
+        C${x + w * 0.65},${y} ${x + w * 0.8},${y + hh * 0.4} ${x + w * 0.9},${y + hh}
+        C${x + w * 0.9},${y + hh * 1.7} ${x + w * 0.65},${y + h} ${x + hw},${y + h}
+        C${x + w * 0.35},${y + h} ${x + w * 0.2},${y + hh * 1.6} ${x + w * 0.1},${y + hh} Z"
+        fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+    }
+
+    function renderCardSVG(card, width = 120) {
+      const height = Math.round(width * 1.5);
+      const count = card.number + 1;
+      const color = COLORS[card.color];
+      const patternId = `stripe-${card.color}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const shapeW = width * 0.55;
+      const shapeH = height * 0.18;
+      const cx = width / 2;
+
+      // Vertical positions for 1, 2, or 3 shapes
+      let yPositions;
+      if (count === 1) {
+        yPositions = [height / 2];
+      } else if (count === 2) {
+        yPositions = [height * 0.35, height * 0.65];
+      } else {
+        yPositions = [height * 0.22, height * 0.5, height * 0.78];
+      }
+
+      const fill = getShapeFill(card.shading, color, patternId);
+      const stroke = getShapeStroke(color);
+
+      const renderers = [renderDiamond, renderSquiggle, renderOval];
+      const renderShape = renderers[card.shape];
+
+      let defs = '';
+      if (card.shading === 1) {
+        defs = `<defs>${createStripedPattern(patternId, color)}</defs>`;
+      }
+
+      const shapes = yPositions.map(y => renderShape(cx, y, shapeW, shapeH, fill, stroke)).join('');
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+        ${defs}
+        <rect x="1" y="1" width="${width - 2}" height="${height - 2}" rx="8" ry="8"
+          fill="white" stroke="#ccc" stroke-width="1.5"/>
+        ${shapes}
+      </svg>`;
+    }
+
+    function cardLabel(card) {
+      return `${NUMBER_NAMES[card.number]} ${COLOR_NAMES[card.color]} ${SHADING_NAMES[card.shading]} ${SHAPE_NAMES[card.shape]}`;
+    }
+
+    // --- UI ---
+
+    const grid = document.getElementById('card-grid');
+    const emptyState = document.getElementById('empty-state');
+    const resultsSection = document.getElementById('results-section');
+    const resultsTitle = document.getElementById('results-title');
+    const resultsBody = document.getElementById('results-body');
+
+    function renderGrid() {
+      // Remove all card containers
+      grid.querySelectorAll('.card-container').forEach(el => el.remove());
+
+      if (cards.length === 0) {
+        emptyState.style.display = 'block';
+      } else {
+        emptyState.style.display = 'none';
+        cards.forEach((card, idx) => {
+          const container = document.createElement('div');
+          container.className = 'card-container';
+          container.dataset.index = idx;
+          container.innerHTML = `
+            ${renderCardSVG(card)}
+            <button class="remove-btn" data-index="${idx}">&times;</button>
+            <div class="card-label">${cardLabel(card)}</div>
+          `;
+          grid.appendChild(container);
+        });
+      }
+    }
+
+    function clearHighlights() {
+      grid.querySelectorAll('.card-container').forEach(el => el.classList.remove('highlighted'));
+    }
+
+    function highlightCards(indices) {
+      clearHighlights();
+      indices.forEach(idx => {
+        const container = grid.querySelector(`.card-container[data-index="${idx}"]`);
+        if (container) container.classList.add('highlighted');
+      });
+    }
+
+    function analyzeSet(c1, c2, c3) {
+      const attrs = ['number', 'color', 'shape', 'shading'];
+      const labels = { number: 'Number', color: 'Color', shape: 'Shape', shading: 'Shading' };
+      const valueNames = {
+        number: NUMBER_NAMES,
+        color: COLOR_NAMES,
+        shape: SHAPE_NAMES,
+        shading: SHADING_NAMES,
+      };
+
+      return attrs.map(attr => {
+        const vals = [c1[attr], c2[attr], c3[attr]];
+        const allSame = vals[0] === vals[1] && vals[1] === vals[2];
+        const names = vals.map(v => valueNames[attr][v]);
+        return {
+          label: labels[attr],
+          status: allSame ? 'All same' : 'All different',
+          statusClass: allSame ? 'same' : 'different',
+          values: names.join(', '),
+        };
+      });
+    }
+
+    function renderResults(sets) {
+      resultsBody.innerHTML = '';
+
+      if (sets.length === 0) {
+        resultsTitle.textContent = 'No Sets Found';
+        resultsBody.innerHTML = '<div class="no-sets">No valid Sets among the current cards.</div>';
+        resultsSection.classList.add('visible');
+        return;
+      }
+
+      resultsTitle.textContent = `${sets.length} Set${sets.length > 1 ? 's' : ''} Found`;
+
+      sets.forEach(([i, j, k], setIdx) => {
+        const c1 = cards[i], c2 = cards[j], c3 = cards[k];
+        const analysis = analyzeSet(c1, c2, c3);
+
+        const div = document.createElement('div');
+        div.className = 'set-result';
+        div.innerHTML = `
+          <h3>Set ${setIdx + 1} (cards ${i + 1}, ${j + 1}, ${k + 1})</h3>
+          <div class="set-cards">
+            ${renderCardSVG(c1, 90)}
+            ${renderCardSVG(c2, 90)}
+            ${renderCardSVG(c3, 90)}
+          </div>
+          <div class="set-analysis">
+            ${analysis.map(a => `
+              <div class="attr-row">
+                <span>${a.label}: ${a.values}</span>
+                <span class="attr-status ${a.statusClass}">${a.status}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        div.addEventListener('mouseenter', () => highlightCards([i, j, k]));
+        div.addEventListener('mouseleave', () => clearHighlights());
+
+        resultsBody.appendChild(div);
+      });
+
+      resultsSection.classList.add('visible');
+    }
+
+    // --- Event Handlers ---
+
+    document.getElementById('btn-add').addEventListener('click', () => {
+      const number = parseInt(document.getElementById('sel-number').value);
+      const color = parseInt(document.getElementById('sel-color').value);
+      const shape = parseInt(document.getElementById('sel-shape').value);
+      const shading = parseInt(document.getElementById('sel-shading').value);
+
+      cards.push(createCard(number, color, shape, shading));
+      renderGrid();
+      resultsSection.classList.remove('visible');
+    });
+
+    document.getElementById('btn-check').addEventListener('click', () => {
+      const sets = findAllSets(cards);
+      renderResults(sets);
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      cards = [];
+      renderGrid();
+      resultsSection.classList.remove('visible');
+    });
+
+    grid.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.remove-btn');
+      if (removeBtn) {
+        const idx = parseInt(removeBtn.dataset.index);
+        cards.splice(idx, 1);
+        renderGrid();
+        resultsSection.classList.remove('visible');
+      }
+    });
+
+    renderGrid();
+  </script>
+</body>
+</html>
